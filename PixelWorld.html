@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PixelWorld — Pixel Game Map Editor</title>
+<style>
+  :root {
+    --bg: #0b1020; --panel: #121a2e; --panel2: #18233b; --line: #2a3856;
+    --text: #edf3ff; --muted: #93a4c4; --accent: #8b5cf6; --accent2: #6d8dff;
+    --tile: 32px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; color: var(--text);
+    background: radial-gradient(circle at 20% 0%, #1b2550 0, transparent 35%), var(--bg);
+    font: 14px/1.45 Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;
+  }
+  button, select, input { font: inherit; }
+  button {
+    border: 1px solid var(--line); background: #202c47; color: var(--text);
+    padding: 9px 12px; border-radius: 9px; cursor: pointer; transition: .15s ease;
+  }
+  button:hover { border-color: #8b5cf6; transform: translateY(-1px); }
+  button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid #a78bfa; outline-offset: 2px; }
+  button.primary { background: linear-gradient(135deg, #8b5cf6, #5b6cf9); border-color: transparent; font-weight: 700; }
+  button.danger { color: #ffc0c8; }
+  button.active { border-color: #a78bfa; background: #38296a; box-shadow: inset 0 0 0 1px #8b5cf6; }
+  .app { max-width: 1500px; margin: auto; padding: 22px; }
+  header { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:20px; }
+  .brand { display:flex; align-items:center; gap:12px; }
+  .logo { width:45px; height:45px; display:grid; place-items:center; border-radius:13px; background:linear-gradient(135deg,#8b5cf6,#38bdf8); font-size:24px; box-shadow:0 8px 28px #6d5ef54a; }
+  h1 { margin:0; font-size:clamp(22px,3vw,30px); letter-spacing:-.8px; }
+  .subtitle { color:var(--muted); margin-top:3px; }
+  .header-actions { display:flex; gap:8px; flex-wrap:wrap; }
+  .layout { display:grid; grid-template-columns:240px minmax(0,1fr) 245px; gap:16px; align-items:start; }
+  .panel { background:linear-gradient(180deg,#141d33f2,#10182bf2); border:1px solid var(--line); border-radius:15px; padding:16px; box-shadow:0 12px 35px #00000018; }
+  .panel h2 { font-size:13px; text-transform:uppercase; letter-spacing:1.2px; margin:0 0 13px; color:#b8c7e7; }
+  .section + .section { border-top:1px solid var(--line); padding-top:16px; margin-top:17px; }
+  .tile-palette { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+  .tile-option { padding:8px 3px; min-width:0; background:#111a2d; display:flex; flex-direction:column; align-items:center; gap:6px; }
+  .tile-preview { width:35px; height:35px; border:1px solid #ffffff2b; image-rendering:pixelated; }
+  .tile-option span:last-child { color:#b8c7e7; font-size:11px; }
+  .tool-list { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .tool-list button { padding:9px 6px; }
+  .field { display:flex; flex-direction:column; gap:6px; margin:10px 0; }
+  .field label { color:var(--muted); font-size:12px; }
+  input[type="number"], select { width:100%; color:var(--text); background:#0c1426; border:1px solid var(--line); border-radius:8px; padding:9px; }
+  .workspace { min-width:0; }
+  .canvas-panel { padding:0; overflow:hidden; }
+  .canvas-toolbar { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 14px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  .canvas-toolbar .group { display:flex; align-items:center; gap:7px; flex-wrap:wrap; }
+  .canvas-toolbar button { padding:7px 10px; }
+  .status { color:var(--muted); font-size:12px; }
+  .canvas-wrap { overflow:auto; max-height:68vh; min-height:400px; padding:20px; background-color:#0a1120; background-image:radial-gradient(#27344d 1px,transparent 1px); background-size:16px 16px; }
+  canvas { display:block; margin:auto; image-rendering:pixelated; cursor:crosshair; box-shadow:0 8px 35px #0008; touch-action:none; }
+  .canvas-footer { display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px; padding:10px 14px; color:var(--muted); font-size:12px; border-top:1px solid var(--line); }
+  .stats { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .stat { background:#0d1629; border:1px solid #24324d; border-radius:10px; padding:11px; }
+  .stat strong { display:block; font-size:20px; }
+  .stat span { color:var(--muted); font-size:11px; }
+  .mini-map { width:100%; height:auto; border-radius:8px; background:#0b1222; border:1px solid var(--line); image-rendering:pixelated; }
+  .hint { color:var(--muted); font-size:12px; margin:9px 0 0; }
+  .full { width:100%; }
+  .toast { position:fixed; left:50%; bottom:24px; transform:translate(-50%,20px); background:#1d2a45; border:1px solid #52678f; color:#fff; padding:11px 16px; border-radius:10px; opacity:0; pointer-events:none; transition:.2s; z-index:10; box-shadow:0 10px 30px #0007; }
+  .toast.show { opacity:1; transform:translate(-50%,0); }
+  .modal-backdrop { position:fixed; inset:0; background:#050814c9; display:none; align-items:center; justify-content:center; padding:18px; z-index:20; }
+  .modal-backdrop.show { display:flex; }
+  .modal { width:min(560px,100%); background:#121b30; border:1px solid var(--line); border-radius:16px; padding:20px; box-shadow:0 20px 80px #0009; }
+  .modal h2 { margin-top:0; }
+  .modal textarea { width:100%; min-height:220px; resize:vertical; background:#091120; color:#dce8ff; border:1px solid var(--line); border-radius:9px; padding:12px; font:12px/1.5 ui-monospace,monospace; }
+  .modal-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:12px; }
+  @media (max-width:1100px) { .layout { grid-template-columns:220px minmax(0,1fr); } .right-panel { grid-column:1/-1; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; } .right-panel .section + .section { border:0; padding:0; margin:0; } }
+  @media (max-width:720px) { .app { padding:12px; } header { align-items:flex-start; flex-direction:column; } .layout { grid-template-columns:1fr; } .left-panel { order:2; } .workspace { order:1; } .right-panel { order:3; display:block; } .right-panel .section + .section { border-top:1px solid var(--line); padding-top:16px; margin-top:17px; } .canvas-wrap { min-height:330px; padding:12px; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand">
+      <div class="logo" aria-hidden="true">▦</div>
+      <div><h1>PixelWorld</h1><div class="subtitle">Pixel Game Map Editor <span style="color:#8b5cf6">•</span> Build worlds tile by tile</div></div>
+    </div>
+    <div class="header-actions">
+      <button id="newMapBtn">＋ New Map</button>
+      <button id="importBtn">Import JSON</button>
+      <input id="importFile" type="file" accept=".json,application/json" hidden>
+      <button class="primary" id="exportBtn">⇩ Export JSON</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="panel left-panel">
+      <div class="section">
+        <h2>Tile Palette</h2>
+        <div class="tile-palette" id="tilePalette"></div>
+        <p class="hint">Choose a tile, then click or drag across the map to paint.</p>
+      </div>
+      <div class="section">
+        <h2>Tools</h2>
+        <div class="tool-list">
+          <button class="active" data-tool="paint">✎ Paint</button>
+          <button data-tool="erase">⌫ Eraser</button>
+          <button data-tool="fill">▧ Fill</button>
+          <button data-tool="sample">⌖ Sample</button>
+        </div>
+        <p class="hint">Fill replaces connected tiles of the same type. Sample picks a tile from the map.</p>
+      </div>
+      <div class="section">
+        <h2>Map Settings</h2>
+        <div class="field"><label for="mapName">Map name</label><input id="mapName" type="text" value="My Pixel World" maxlength="60"></div>
+        <div class="field"><label for="mapWidth">Width (tiles)</label><input id="mapWidth" type="number" min="5" max="80" value="24"></div>
+        <div class="field"><label for="mapHeight">Height (tiles)</label><input id="mapHeight" type="number" min="5" max="50" value="16"></div>
+        <div class="field"><label for="tileSize">Tile size</label><select id="tileSize"><option value="20">20 × 20 px</option><option value="24">24 × 24 px</option><option value="32" selected>32 × 32 px</option><option value="40">40 × 40 px</option></select></div>
+        <button class="full" id="resizeBtn">Apply Map Settings</button>
+      </div>
+    </aside>
+
+    <section class="workspace">
+      <div class="panel canvas-panel">
+        <div class="canvas-toolbar">
+          <div class="group"><strong>🗺️ Map Canvas</strong><span class="status" id="mapDimensions">24 × 16 tiles</span></div>
+          <div class="group"><button id="undoBtn" title="Undo (Ctrl+Z)">↶ Undo</button><button id="redoBtn" title="Redo (Ctrl+Y)">↷ Redo</button><button id="gridBtn" class="active">▦ Grid</button></div>
+        </div>
+        <div class="canvas-wrap" id="canvasWrap"><canvas id="mapCanvas" aria-label="Pixel map editor canvas"></canvas></div>
+        <div class="canvas-footer"><span id="cursorInfo">Tile: —, —</span><span id="selectedInfo">Selected: Grass</span><span>Drag to draw • Ctrl+Z to undo</span></div>
+      </div>
+    </section>
+
+    <aside class="panel right-panel">
+      <div class="section">
+        <h2>Map Overview</h2>
+        <canvas class="mini-map" id="miniMap" width="240" height="160" aria-label="Map overview"></canvas>
+        <p class="hint">A miniature preview of your current level.</p>
+      </div>
+      <div class="section">
+        <h2>Map Stats</h2>
+        <div class="stats">
+          <div class="stat"><strong id="statTiles">384</strong><span>Total tiles</span></div>
+          <div class="stat"><strong id="statUsed">1</strong><span>Tile types used</span></div>
+          <div class="stat"><strong id="statLand">384</strong><span>Ground tiles</span></div>
+          <div class="stat"><strong id="statObstacles">0</strong><span>Obstacles</span></div>
+        </div>
+      </div>
+      <div class="section">
+        <h2>Quick Actions</h2>
+        <button class="full" id="fillAllBtn">Fill Map with Selected Tile</button>
+        <button class="full" id="clearBtn" style="margin-top:8px">Clear Map</button>
+        <p class="hint">Your work stays in this browser tab until you export it.</p>
+      </div>
+    </aside>
+  </main>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="modal-backdrop" id="jsonModal" role="dialog" aria-modal="true" aria-labelledby="jsonTitle">
+  <div class="modal">
+    <h2 id="jsonTitle">Map JSON</h2>
+    <p class="hint">Your map data is ready. Copy it or download it as a JSON file.</p>
+    <textarea id="jsonOutput" spellcheck="false"></textarea>
+    <div class="modal-actions"><button id="copyJsonBtn">Copy JSON</button><button id="downloadJsonBtn" class="primary">Download .json</button><button id="closeModalBtn">Close</button></div>
+  </div>
+</div>
+<script>
+(() => {
+  "use strict";
+  const TILE_TYPES = [
+    { id: 0, name: "Grass", color: "#55b957", emoji: "🌱", group: "ground" },
+    { id: 1, name: "Dirt", color: "#98633f", emoji: "🟫", group: "ground" },
+    { id: 2, name: "Water", color: "#3299e8", emoji: "🌊", group: "terrain" },
+    { id: 3, name: "Sand", color: "#e8cf78", emoji: "🏖️", group: "ground" },
+    { id: 4, name: "Stone", color: "#8b96a8", emoji: "🪨", group: "terrain" },
+    { id: 5, name: "Tree", color: "#247747", emoji: "🌳", group: "obstacle" },
+    { id: 6, name: "Wall", color: "#5b6476", emoji: "🧱", group: "obstacle" },
+    { id: 7, name: "Lava", color: "#f05a35", emoji: "🌋", group: "hazard" },
+    { id: 8, name: "Path", color: "#c6a16b", emoji: "🟨", group: "ground" },
+    { id: 9, name: "Flower", color: "#e879c6", emoji: "🌸", group: "decoration" },
+    { id: 10, name: "Water Edge", color: "#78d5f5", emoji: "💧", group: "terrain" },
+    { id: 11, name: "Empty", color: "#111827", emoji: "⌫", group: "special" }
+  ];
+  const $ = id => document.getElementById(id);
+  const canvas = $("mapCanvas"), ctx = canvas.getContext("2d");
+  const mini = $("miniMap"), mctx = mini.getContext("2d");
+  let width = 24, height = 16, tileSize = 32, selectedTile = 0, tool = "paint", showGrid = true;
+  let map = [], undoStack = [], redoStack = [], drawing = false, lastPainted = "";
+  const tileById = id => TILE_TYPES.find(t => t.id === id) || TILE_TYPES[0];
+  const cloneMap = data => data.map(row => row.slice());
+  function createMap(w, h, fill = 0) { return Array.from({length:h}, () => Array(w).fill(fill)); }
+  function snapshot() {
+    undoStack.push({map:cloneMap(map), width, height});
+    if (undoStack.length > 80) undoStack.shift();
+    redoStack = [];
+    updateUndoButtons();
+  }
+  function restoreState(state) {
+    map = cloneMap(state.map); width = state.width; height = state.height;
+    $("mapWidth").value = width; $("mapHeight").value = height;
+    drawMap(); updateStats(); updateUndoButtons();
+  }
+  function resizeCanvas() {
+    canvas.width = width * tileSize; canvas.height = height * tileSize;
+    canvas.style.width = canvas.width + "px"; canvas.style.height = canvas.height + "px";
+  }
+  function drawTile(context, id, x, y, size, grid = false) {
+    const tile = tileById(id);
+    context.fillStyle = tile.color; context.fillRect(x, y, size, size);
+    // Simple pixel-art details make tile types easy to distinguish.
+    context.save();
+    if (id === 0) {
+      context.fillStyle = "#8be27b"; context.fillRect(x+size*.18,y+size*.22,Math.max(2,size*.12),Math.max(2,size*.12));
+      context.fillRect(x+size*.67,y+size*.58,Math.max(2,size*.09),Math.max(2,size*.09));
+      context.fillStyle = "#32964c"; context.fillRect(x+size*.42,y+size*.76,Math.max(2,size*.1),Math.max(2,size*.1));
+    } else if (id === 1 || id === 8) {
+      context.fillStyle = id===1 ? "#6f462f" : "#a77f4e";
+      context.fillRect(x+size*.15,y+size*.25,size*.22,size*.12);
+      context.fillRect(x+size*.62,y+size*.62,size*.18,size*.1);
+    } else if (id === 2) {
+      context.fillStyle = "#83d8ff"; context.fillRect(x+size*.12,y+size*.24,size*.38,Math.max(2,size*.08));
+      context.fillRect(x+size*.48,y+size*.65,size*.36,Math.max(2,size*.08));
+    } else if (id === 3) {
+      context.fillStyle = "#fff0a7"; context.fillRect(x+size*.22,y+size*.28,size*.13,size*.13);
+      context.fillRect(x+size*.64,y+size*.65,size*.1,size*.1);
+    } else if (id === 4 || id === 6) {
+      context.fillStyle = id===4 ? "#b7c1cf" : "#8792a7";
+      context.fillRect(x+size*.12,y+size*.16,size*.36,size*.2);
+      context.fillRect(x+size*.53,y+size*.53,size*.3,size*.16);
+      if(id===6){context.fillStyle="#424b5c";context.fillRect(x,y+size*.48,size,size*.07);}
+    } else if (id === 5) {
+      context.fillStyle="#70472f"; context.fillRect(x+size*.42,y+size*.55,size*.18,size*.36);
+      context.fillStyle="#165a38"; context.fillRect(x+size*.16,y+size*.13,size*.68,size*.52);
+      context.fillStyle="#2c9955"; context.fillRect(x+size*.28,y+size*.08,size*.38,size*.28);
+    } else if (id === 7) {
+      context.fillStyle="#ffcf4a"; context.fillRect(x+size*.2,y+size*.6,size*.25,size*.16);
+      context.fillStyle="#ff8b30"; context.fillRect(x+size*.56,y+size*.2,size*.18,size*.32);
+    } else if (id === 9) {
+      context.fillStyle="#2b8548"; context.fillRect(x+size*.47,y+size*.48,size*.1,size*.38);
+      context.fillStyle="#fff0f8"; context.fillRect(x+size*.28,y+size*.25,size*.44,size*.25);
+      context.fillStyle="#ffcf4a"; context.fillRect(x+size*.43,y+size*.31,size*.16,size*.14);
+    } else if (id === 10) {
+      context.fillStyle="#d8f8ff"; context.fillRect(x+size*.12,y+size*.2,size*.65,Math.max(2,size*.12));
+      context.fillStyle="#42b9e9"; context.fillRect(x+size*.35,y+size*.58,size*.48,Math.max(2,size*.1));
+    } else if (id === 11) {
+      context.fillStyle="#26334a"; context.fillRect(x+size*.2,y+size*.2,size*.6,size*.6);
+      context.strokeStyle="#71819c"; context.lineWidth=Math.max(1,size*.05);
+      context.beginPath(); context.moveTo(x+size*.28,y+size*.28); context.lineTo(x+size*.72,y+size*.72);
+      context.moveTo(x+size*.72,y+size*.28); context.lineTo(x+size*.28,y+size*.72); context.stroke();
+    }
+    context.restore();
+    if (grid) {
+      context.strokeStyle = "#0a1327a8"; context.lineWidth = 1;
+      context.strokeRect(x+.5,y+.5,size-1,size-1);
+    }
+  }
+  function drawMap() {
+    resizeCanvas();
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    for (let y=0;y<height;y++) for (let x=0;x<width;x++)
+      drawTile(ctx,map[y][x],x*tileSize,y*tileSize,tileSize,showGrid);
+    drawMiniMap();
+    $("mapDimensions").textContent = `${width} × ${height} tiles`;
+  }
+  function drawMiniMap() {
+    const cw=mini.width/width, ch=mini.height/height;
+    mctx.clearRect(0,0,mini.width,mini.height);
+    for(let y=0;y<height;y++) for(let x=0;x<width;x++) {
+      mctx.fillStyle=tileById(map[y][x]).color;
+      mctx.fillRect(x*cw,y*ch,Math.ceil(cw),Math.ceil(ch));
+    }
+  }
+  function updateStats() {
+    const counts = new Map();
+    map.flat().forEach(id=>counts.set(id,(counts.get(id)||0)+1));
+    $("statTiles").textContent = width*height;
+    $("statUsed").textContent = counts.size;
+    $("statLand").textContent = map.flat().filter(id=>[0,1,3,8].includes(id)).length;
+    $("statObstacles").textContent = map.flat().filter(id=>[5,6,7].includes(id)).length;
+  }
+  function updateUndoButtons() {
+    $("undoBtn").disabled = !undoStack.length;
+    $("redoBtn").disabled = !redoStack.length;
+    $("undoBtn").style.opacity=undoStack.length?1:.45;
+    $("redoBtn").style.opacity=redoStack.length?1:.45;
+  }
+  function toast(message) {
+    const el=$("toast"); el.textContent=message; el.classList.add("show");
+    clearTimeout(toast.timer); toast.timer=setTimeout(()=>el.classList.remove("show"),2200);
+  }
+  function buildPalette() {
+    const root=$("tilePalette"); root.innerHTML="";
+    TILE_TYPES.forEach(tile=>{
+      const btn=document.createElement("button");
+      btn.className="tile-option"+(tile.id===selectedTile?" active":"");
+      btn.type="button"; btn.setAttribute("aria-label",tile.name); btn.title=tile.name;
+      const preview=document.createElement("canvas"); preview.width=70; preview.height=70; preview.className="tile-preview";
+      drawTile(preview.getContext("2d"),tile.id,0,0,70,false);
+      const name=document.createElement("span"); name.textContent=tile.name;
+      btn.append(preview,name);
+      btn.addEventListener("click",()=>selectTile(tile.id));
+      root.append(btn);
+    });
+  }
+  function selectTile(id) {
+    selectedTile=id; buildPalette();
+    $("selectedInfo").textContent="Selected: "+tileById(id).name;
+  }
+  function setTool(next) {
+    tool=next;
+    document.querySelectorAll("[data-tool]").forEach(btn=>btn.classList.toggle("active",btn.dataset.tool===tool));
+    canvas.style.cursor=tool==="sample"?"copy":tool==="erase"?"cell":"crosshair";
+  }
+  function coordsFromEvent(event) {
+    const rect=canvas.getBoundingClientRect();
+    const x=Math.floor((event.clientX-rect.left)*(canvas.width/rect.width)/tileSize);
+    const y=Math.floor((event.clientY-rect.top)*(canvas.height/rect.height)/tileSize);
+    return {x,y};
+  }
+  function paintAt(x,y) {
+    if(x<0||y<0||x>=width||y>=height)return;
+    $("cursorInfo").textContent=`Tile: ${x+1}, ${y+1}`;
+    if(tool==="sample") { selectTile(map[y][x]); setTool("paint"); return; }
+    if(tool==="fill") { floodFill(x,y,selectedTile); setTool("paint"); return; }
+    const id=tool==="erase"?11:selectedTile;
+    const key=x+","+y;
+    if(lastPainted===key && map[y][x]===id)return;
+    lastPainted=key;
+    if(map[y][x]!==id) { map[y][x]=id; drawTile(ctx,id,x*tileSize,y*tileSize,tileSize,showGrid); drawMiniMap(); updateStats(); }
+  }
+  function floodFill(sx,sy,newId) {
+    const oldId=map[sy][sx]; if(oldId===newId)return;
+    snapshot();
+    const stack=[[sx,sy]], seen=new Set();
+    while(stack.length) {
+      const [x,y]=stack.pop(), key=x+","+y;
+      if(x<0||y<0||x>=width||y>=height||seen.has(key)||map[y][x]!==oldId)continue;
+      seen.add(key); map[y][x]=newId;
+      stack.push([x+1,y],[x-1,y],[x,y+1],[x,y-1]);
+    }
+    drawMap(); updateStats(); toast("Connected area filled");
+  }
+  canvas.addEventListener("pointerdown",e=>{
+    e.preventDefault(); const {x,y}=coordsFromEvent(e);
+    if(tool==="fill"||tool==="sample") { paintAt(x,y); return; }
+    snapshot(); drawing=true; lastPainted=""; canvas.setPointerCapture(e.pointerId); paintAt(x,y);
+  });
+  canvas.addEventListener("pointermove",e=>{
+    const {x,y}=coordsFromEvent(e);
+    if(x>=0&&y>=0&&x<width&&y<height) $("cursorInfo").textContent=`Tile: ${x+1}, ${y+1}`;
+    if(drawing)paintAt(x,y);
+  });
+  function stopDrawing(){if(drawing){drawing=false;lastPainted="";drawMap();updateStats();}}
+  canvas.addEventListener("pointerup",stopDrawing);
+  canvas.addEventListener("pointercancel",stopDrawing);
+  canvas.addEventListener("pointerleave",()=>{if(!drawing)$("cursorInfo").textContent="Tile: —, —";});
+  document.querySelectorAll("[data-tool]").forEach(btn=>btn.addEventListener("click",()=>setTool(btn.dataset.tool)));
+  $("gridBtn").addEventListener("click",()=>{showGrid=!showGrid;$("gridBtn").classList.toggle("active",showGrid);drawMap();});
+  $("undoBtn").addEventListener("click",()=>{
+    if(!undoStack.length)return;
+    redoStack.push({map:cloneMap(map),width,height}); restoreState(undoStack.pop()); toast("Undo complete");
+  });
+  $("redoBtn").addEventListener("click",()=>{
+    if(!redoStack.length)return;
+    undoStack.push({map:cloneMap(map),width,height}); restoreState(redoStack.pop()); toast("Redo complete");
+  });
+  function applyResize() {
+    const w=Math.max(5,Math.min(80,parseInt($("mapWidth").value,10)||24));
+    const h=Math.max(5,Math.min(50,parseInt($("mapHeight").value,10)||16));
+    const size=parseInt($("tileSize").value,10)||32;
+    snapshot();
+    const next=createMap(w,h,0);
+    for(let y=0;y<Math.min(h,height);y++)for(let x=0;x<Math.min(w,width);x++)next[y][x]=map[y][x];
+    map=next;width=w;height=h;tileSize=size;
+    $("mapWidth").value=w;$("mapHeight").value=h;
+    drawMap();updateStats();toast("Map settings applied");
+  }
+  $("resizeBtn").addEventListener("click",applyResize);
+  $("newMapBtn").addEventListener("click",()=>{
+    if(!confirm("Create a new blank map? Your current map will be replaced."))return;
+    snapshot(); width=Math.max(5,Math.min(80,parseInt($("mapWidth").value,10)||24));
+    height=Math.max(5,Math.min(50,parseInt($("mapHeight").value,10)||16));
+    tileSize=parseInt($("tileSize").value,10)||32; map=createMap(width,height,0);
+    $("mapName").value="My Pixel World";drawMap();updateStats();toast("New map created");
+  });
+  $("fillAllBtn").addEventListener("click",()=>{
+    snapshot(); map=createMap(width,height,selectedTile);drawMap();updateStats();toast("Map filled with "+tileById(selectedTile).name);
+  });
+  $("clearBtn").addEventListener("click",()=>{
+    if(!confirm("Clear the entire map?"))return;
+    snapshot();map=createMap(width,height,11);drawMap();updateStats();toast("Map cleared");
+  });
+  function exportData() {
+    return {
+      format:"PixelWorld Map", version:1, name:$("mapName").value.trim()||"Untitled Map",
+      width, height, tileSize,
+      tiles:TILE_TYPES.map(({id,name,color,group})=>({id,name,color,group})),
+      legend:Object.fromEntries(TILE_TYPES.map(t=>[t.id,t.name])),
+      map:map.map(row=>row.slice()),
+      createdAt:new Date().toISOString()
+    };
+  }
+  function openJsonModal() { $("jsonOutput").value=JSON.stringify(exportData(),null,2);$("jsonModal").classList.add("show"); }
+  function downloadJson() {
+    const blob=new Blob([JSON.stringify(exportData(),null,2)],{type:"application/json"});
+    const url=URL.createObjectURL(blob), a=document.createElement("a");
+    const safeName=($("mapName").value.trim()||"pixelworld-map").replace(/[^a-z0-9-_]+/gi,"-").replace(/^-|-$/g,"").toLowerCase()||"pixelworld-map";
+    a.href=url;a.download=safeName+".json";document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
+    toast("JSON map downloaded");
+  }
+  $("exportBtn").addEventListener("click",openJsonModal);
+  $("downloadJsonBtn").addEventListener("click",downloadJson);
+  $("closeModalBtn").addEventListener("click",()=>$("jsonModal").classList.remove("show"));
+  $("jsonModal").addEventListener("click",e=>{if(e.target===$("jsonModal"))$("jsonModal").classList.remove("show");});
+  $("copyJsonBtn").addEventListener("click",async()=>{
+    const text=$("jsonOutput").value;
+    try { await navigator.clipboard.writeText(text);toast("JSON copied to clipboard"); }
+    catch { $("jsonOutput").focus();$("jsonOutput").select();try{document.execCommand("copy");toast("JSON copied");}catch{toast("Select the text and copy it manually");} }
+  });
+  $("importBtn").addEventListener("click",()=>$("importFile").click());
+  $("importFile").addEventListener("change",async e=>{
+    const file=e.target.files&&e.target.files[0];if(!file)return;
+    try {
+      const data=JSON.parse(await file.text());
+      const imported=data.map||data.tilesMap;
+      if(!Array.isArray(imported)||!imported.length||!Array.isArray(imported[0]))throw new Error("Invalid map format");
+      const w=imported[0].length,h=imported.length;
+      if(w<1||h<1||w>80||h>50||imported.some(row=>!Array.isArray(row)||row.length!==w))throw new Error("Map dimensions must be consistent and no larger than 80 × 50");
+      const clean=imported.map(row=>row.map(v=>Number.isInteger(v)&&TILE_TYPES.some(t=>t.id===v)?v:0));
+      snapshot();map=clean;width=w;height=h;tileSize=[20,24,32,40].includes(Number(data.tileSize))?Number(data.tileSize):32;
+      $("mapWidth").value=width;$("mapHeight").value=height;$("tileSize").value=String(tileSize);
+      $("mapName").value=typeof data.name==="string"?data.name.slice(0,60):"Imported Pixel World";
+      drawMap();updateStats();toast("Map imported successfully");
+    } catch(err) { alert("Could not import map: "+err.message); }
+    e.target.value="";
+  });
+  document.addEventListener("keydown",e=>{
+    const target=e.target;
+    if(target.matches("input,textarea,select"))return;
+    if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="z"){e.preventDefault();$("undoBtn").click();}
+    else if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="y"){e.preventDefault();$("redoBtn").click();}
+    else if(e.key==="Escape")$("jsonModal").classList.remove("show");
+  });
+  map=createMap(width,height,0);
+  buildPalette();drawMap();updateStats();updateUndoButtons();
+})();
+</script>
+</body>
+</html>
