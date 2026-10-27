@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WebDesk — Mini Desktop</title>
+<style>
+:root{--accent:#a78bfa;--panel:rgba(20,20,35,.78);--line:rgba(255,255,255,.18);--text:#f8fafc}
+*{box-sizing:border-box}body{margin:0;font-family:Inter,Segoe UI,Arial,sans-serif;color:var(--text);height:100vh;overflow:hidden;background:#16152c}
+#desktop{height:100vh;width:100vw;position:relative;background:linear-gradient(135deg,rgba(12,12,28,.3),rgba(22,12,45,.2)),radial-gradient(ellipse at 20% 20%,#6752ad 0,transparent 40%),radial-gradient(ellipse at 80% 80%,#176c8c 0,transparent 45%),linear-gradient(135deg,#15152e,#272044 55%,#101a2e);background-size:cover;background-position:center}
+#desktop:after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(120deg,transparent 30%,rgba(255,255,255,.035),transparent 70%)}
+#icons{position:absolute;top:18px;left:16px;display:grid;gap:18px;z-index:1}.desk-icon{width:82px;text-align:center;padding:9px 4px;border-radius:12px;cursor:pointer;font-size:12px;text-shadow:0 2px 6px #000}.desk-icon:hover{background:#ffffff22}.desk-icon .emoji{font-size:29px;display:block;margin-bottom:7px}
+#taskbar{position:absolute;z-index:1000;bottom:0;left:0;right:0;height:58px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;background:rgba(14,14,25,.72);backdrop-filter:blur(22px);border-top:1px solid var(--line)}
+#task-left,#task-right{display:flex;align-items:center;gap:10px}.task-btn{border:1px solid transparent;background:transparent;color:white;padding:9px 12px;border-radius:11px;cursor:pointer;font-size:14px}.task-btn:hover,.task-btn.active{background:#ffffff20;border-color:#ffffff22}.start{font-size:20px;color:#c4b5fd}.clock{text-align:right;font-size:12px;line-height:1.45;min-width:82px}
+.window{position:absolute;z-index:5;width:min(620px,calc(100vw - 28px));height:min(440px,calc(100vh - 100px));min-width:270px;min-height:190px;display:flex;flex-direction:column;background:rgba(22,22,36,.88);backdrop-filter:blur(25px);border:1px solid var(--line);border-radius:15px;box-shadow:0 22px 65px #0006;overflow:hidden;resize:both}
+.window.hidden{display:none}.titlebar{height:43px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:0 12px;background:#ffffff0b;border-bottom:1px solid #ffffff14;cursor:move;user-select:none;font-size:13px;font-weight:600}.win-controls{display:flex;gap:6px}.win-controls button{border:0;color:white;background:#ffffff15;width:25px;height:25px;border-radius:7px;cursor:pointer}.win-controls button:hover{background:#ffffff30}.win-controls .close:hover{background:#ef4444}
+.content{padding:15px;overflow:auto;flex:1}.muted{color:#c4c4d4;font-size:13px}button,input,textarea,select{font:inherit}button{cursor:pointer}.primary{background:var(--accent);color:#171329;border:0;border-radius:9px;padding:9px 12px;font-weight:650}.soft{background:#ffffff12;border:1px solid #ffffff20;color:white;border-radius:9px;padding:8px 10px}.row{display:flex;gap:8px;align-items:center}.row>*{min-width:0}.field{width:100%;padding:10px;border-radius:9px;background:#ffffff0d;border:1px solid #ffffff20;color:white;outline:none}.field:focus{border-color:var(--accent)}textarea.field{height:100%;resize:none;line-height:1.5}.note-area{height:100%;display:flex;flex-direction:column;gap:9px}.note-area textarea{flex:1;min-height:130px}.calc{max-width:340px;margin:auto}.calc-display{width:100%;height:62px;text-align:right;font-size:27px;margin-bottom:12px}.calc-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.calc-grid button{padding:15px 4px;border:1px solid #ffffff18;border-radius:10px;background:#ffffff0e;color:white;font-size:16px}.calc-grid button:hover{background:#ffffff25}.calc-grid .op{color:#d8b4fe;background:#a78bfa1a}.file-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;margin-top:16px}.file-card{padding:14px 9px;border:1px solid #ffffff18;border-radius:12px;background:#ffffff08;text-align:center;cursor:pointer}.file-card:hover{background:#ffffff18}.file-card .emoji{font-size:27px;display:block;margin-bottom:8px}.file-card small{display:block;color:#c4c4d4;margin-top:5px}.wallpapers{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.wall{height:85px;border:2px solid transparent;border-radius:10px;cursor:pointer}.wall:hover{border-color:white}.wall.one{background:radial-gradient(circle at 20% 20%,#a78bfa,#15152e 70%)}.wall.two{background:linear-gradient(135deg,#0f766e,#0f172a,#1d4ed8)}.wall.three{background:linear-gradient(135deg,#f97316,#7c2d12,#111827)}.wall.four{background:linear-gradient(135deg,#ec4899,#4c1d95,#111827)}.status{font-size:12px;color:#c4c4d4;margin-top:10px}
+#start-menu{position:absolute;z-index:999;bottom:68px;left:14px;width:260px;padding:14px;background:rgba(20,20,34,.94);backdrop-filter:blur(22px);border:1px solid var(--line);border-radius:16px;box-shadow:0 15px 50px #0007}#start-menu.hidden{display:none}.menu-head{font-size:12px;color:#c4c4d4;padding:5px 7px 10px}.menu-item{width:100%;text-align:left;padding:11px;border:0;border-radius:9px;color:white;background:transparent}.menu-item:hover{background:#ffffff16}
+@media(max-width:600px){#icons{grid-template-columns:repeat(2,75px);gap:8px}.desk-icon{font-size:11px}.window{left:10px!important;top:70px!important;width:calc(100vw - 20px)!important;height:calc(100vh - 145px)!important;resize:none}.task-label{display:none}#taskbar{padding:0 8px}.task-btn{padding:8px}}
+</style>
+</head>
+<body>
+<div id="desktop">
+  <div id="icons">
+    <div class="desk-icon" ondblclick="openWindow('files')" onclick="selectIcon(this)"><span class="emoji">📁</span>File Explorer</div>
+    <div class="desk-icon" ondblclick="openWindow('notes')" onclick="selectIcon(this)"><span class="emoji">📝</span>Notes</div>
+    <div class="desk-icon" ondblclick="openWindow('calculator')" onclick="selectIcon(this)"><span class="emoji">🧮</span>Calculator</div>
+    <div class="desk-icon" ondblclick="openWindow('settings')" onclick="selectIcon(this)"><span class="emoji">🎨</span>Personalize</div>
+  </div>
+
+  <section class="window hidden" id="win-files" style="left:150px;top:80px">
+    <div class="titlebar"><span>📁 File Explorer</span><div class="win-controls"><button onclick="minimizeWindow('files')">—</button><button onclick="maximizeWindow('files')">□</button><button class="close" onclick="closeWindow('files')">×</button></div></div>
+    <div class="content"><div class="row"><input class="field" id="file-search" placeholder="Search files..." oninput="filterFiles()"><button class="soft" onclick="newFile()">＋ New</button></div><p class="muted">This is a demo file viewer. Create sample text files and open them here.</p><div class="file-list" id="file-list"></div><div id="file-preview" class="status"></div></div>
+  </section>
+
+  <section class="window hidden" id="win-notes" style="left:230px;top:110px;width:500px;height:390px">
+    <div class="titlebar"><span>📝 Quick Notes</span><div class="win-controls"><button onclick="minimizeWindow('notes')">—</button><button onclick="maximizeWindow('notes')">□</button><button class="close" onclick="closeWindow('notes')">×</button></div></div>
+    <div class="content note-area"><div class="row"><span class="muted">Your notes are saved in this browser.</span><button class="primary" onclick="saveNote()">Save note</button></div><textarea id="note-text" class="field" placeholder="Write an idea, reminder, or anything you want to keep..."></textarea><div id="note-status" class="status">Ready</div></div>
+  </section>
+
+  <section class="window hidden" id="win-calculator" style="left:300px;top:90px;width:350px;height:440px;resize:none">
+    <div class="titlebar"><span>🧮 Calculator</span><div class="win-controls"><button onclick="minimizeWindow('calculator')">—</button><button onclick="maximizeWindow('calculator')">□</button><button class="close" onclick="closeWindow('calculator')">×</button></div></div>
+    <div class="content"><div class="calc"><input id="calc-display" class="field calc-display" value="0" readonly><div class="calc-grid">
+      <button class="op" onclick="calcClear()">AC</button><button class="op" onclick="calcAppend('(')">(</button><button class="op" onclick="calcAppend(')')">)</button><button class="op" onclick="calcAppend('/')">÷</button>
+      <button onclick="calcAppend('7')">7</button><button onclick="calcAppend('8')">8</button><button onclick="calcAppend('9')">9</button><button class="op" onclick="calcAppend('*')">×</button>
+      <button onclick="calcAppend('4')">4</button><button onclick="calcAppend('5')">5</button><button onclick="calcAppend('6')">6</button><button class="op" onclick="calcAppend('-')">−</button>
+      <button onclick="calcAppend('1')">1</button><button onclick="calcAppend('2')">2</button><button onclick="calcAppend('3')">3</button><button class="op" onclick="calcAppend('+')">+</button>
+      <button onclick="calcAppend('0')">0</button><button onclick="calcAppend('.')">.</button><button onclick="calcBack()">⌫</button><button class="primary" onclick="calcEquals()">=</button>
+    </div></div></div>
+  </section>
+
+  <section class="window hidden" id="win-settings" style="left:390px;top:100px;width:390px;height:390px;resize:none">
+    <div class="titlebar"><span>🎨 Personalize</span><div class="win-controls"><button onclick="minimizeWindow('settings')">—</button><button onclick="maximizeWindow('settings')">□</button><button class="close" onclick="closeWindow('settings')">×</button></div></div>
+    <div class="content"><h3 style="margin-top:0">Choose your wallpaper</h3><p class="muted">Pick a look for your WebDesk.</p><div class="wallpapers"><div class="wall one" title="Purple Aurora" onclick="setWallpaper(0)"></div><div class="wall two" title="Ocean" onclick="setWallpaper(1)"></div><div class="wall three" title="Sunset" onclick="setWallpaper(2)"></div><div class="wall four" title="Neon" onclick="setWallpaper(3)"></div></div><h3>Accent color</h3><div class="row"><button class="soft" onclick="setAccent('#a78bfa')">Purple</button><button class="soft" onclick="setAccent('#38bdf8')">Blue</button><button class="soft" onclick="setAccent('#34d399')">Green</button><button class="soft" onclick="setAccent('#fb7185')">Pink</button></div><p class="status">Your wallpaper choice stays active until you change it.</p></div>
+  </section>
+
+  <div id="start-menu" class="hidden"><div class="menu-head">WEBDESK · APPS</div><button class="menu-item" onclick="openWindow('files');toggleStart()">📁 &nbsp; File Explorer</button><button class="menu-item" onclick="openWindow('notes');toggleStart()">📝 &nbsp; Quick Notes</button><button class="menu-item" onclick="openWindow('calculator');toggleStart()">🧮 &nbsp; Calculator</button><button class="menu-item" onclick="openWindow('settings');toggleStart()">🎨 &nbsp; Personalize</button></div>
+  <div id="taskbar"><div id="task-left"><button class="task-btn start" onclick="toggleStart()" title="Start">⊞</button><button class="task-btn" onclick="openWindow('files')">📁 <span class="task-label">Files</span></button><button class="task-btn" onclick="openWindow('notes')">📝 <span class="task-label">Notes</span></button><button class="task-btn" onclick="openWindow('calculator')">🧮 <span class="task-label">Calculator</span></button></div><div id="task-right"><span>🌐</span><span>🔊</span><div class="clock"><div id="clock-time">--:--</div><div id="clock-date">---</div></div></div></div>
+</div>
+<script>
+const desktop=document.getElementById('desktop');let z=10,drag=null,offsetX=0,offsetY=0,maxStates={};
+const sampleFiles=[{name:'Welcome.txt',type:'TXT',icon:'📄',text:'Welcome to WebDesk!\\n\\nThis is a browser-based mini desktop. Open apps from the desktop or Start menu.\\n\\nTry moving windows, writing a note, using the calculator, and changing your wallpaper.'},{name:'Project ideas.txt',type:'TXT',icon:'💡',text:'Project ideas\\n\\n• Personal portfolio\\n• Weather dashboard\\n• Study planner\\n• Mini game collection'},{name:'Readme.txt',type:'TXT',icon:'📘',text:'WebDesk demo file viewer\\n\\nThese sample files are built into the app. Use the New button to add a local demo text file.'},{name:'Pictures',type:'FOLDER',icon:'🖼️',text:'This demo folder is empty.'}];
+function renderFiles(list=sampleFiles){const el=document.getElementById('file-list');el.innerHTML='';list.forEach(f=>{const card=document.createElement('div');card.className='file-card';card.innerHTML=`<span class="emoji">${f.icon}</span><strong>${escapeHtml(f.name)}</strong><small>${f.type}</small>`;card.onclick=()=>{document.getElementById('file-preview').innerHTML=`<strong>${escapeHtml(f.name)}</strong><pre style="white-space:pre-wrap;font:inherit;color:#ddd">${escapeHtml(f.text)}</pre>`};el.appendChild(card)})}
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function filterFiles(){const q=document.getElementById('file-search').value.toLowerCase();renderFiles(sampleFiles.filter(f=>f.name.toLowerCase().includes(q)))}
+function newFile(){const name=prompt('Enter a name for your sample text file:');if(!name)return;const text=prompt('Enter file content:')||'';sampleFiles.push({name:name.endsWith('.txt')?name:name+'.txt',type:'TXT',icon:'📄',text});filterFiles()}
+function openWindow(id){const w=document.getElementById('win-'+id);w.classList.remove('hidden');w.style.zIndex=++z;if(id==='notes'){try{document.getElementById('note-text').value=localStorage.getItem('webdesk-note')||''}catch(e){}}}
+function closeWindow(id){document.getElementById('win-'+id).classList.add('hidden')}
+function minimizeWindow(id){closeWindow(id)}
+function maximizeWindow(id){const w=document.getElementById('win-'+id);if(!maxStates[id]){maxStates[id]={left:w.style.left,top:w.style.top,width:w.style.width,height:w.style.height};w.style.left='10px';w.style.top='10px';w.style.width='calc(100vw - 20px)';w.style.height='calc(100vh - 80px)';w.style.resize='none';maxStates[id].max=true}else{const s=maxStates[id];w.style.left=s.left;w.style.top=s.top;w.style.width=s.width;w.style.height=s.height;w.style.resize='both';maxStates[id]=null}}
+document.querySelectorAll('.titlebar').forEach(bar=>{bar.addEventListener('pointerdown',e=>{if(e.target.tagName==='BUTTON')return;const w=bar.parentElement;w.style.zIndex=++z;drag=w;const r=w.getBoundingClientRect();offsetX=e.clientX-r.left;offsetY=e.clientY-r.top;bar.setPointerCapture(e.pointerId)});bar.addEventListener('pointermove',e=>{if(drag!==bar.parentElement)return;drag.style.left=Math.max(0,Math.min(innerWidth-drag.offsetWidth,e.clientX-offsetX))+'px';drag.style.top=Math.max(0,Math.min(innerHeight-80,e.clientY-offsetY))+'px'});bar.addEventListener('pointerup',()=>drag=null);bar.addEventListener('pointercancel',()=>drag=null)});
+function toggleStart(){document.getElementById('start-menu').classList.toggle('hidden')}
+function selectIcon(el){document.querySelectorAll('.desk-icon').forEach(x=>x.style.background='');el.style.background='#ffffff25'}
+function saveNote(){try{localStorage.setItem('webdesk-note',document.getElementById('note-text').value);document.getElementById('note-status').textContent='Saved in this browser ✓'}catch(e){document.getElementById('note-status').textContent='Unable to save in this browser.'}}
+const wallpapers=['radial-gradient(ellipse at 20% 20%,#6752ad 0,transparent 40%),radial-gradient(ellipse at 80% 80%,#176c8c 0,transparent 45%),linear-gradient(135deg,#15152e,#272044 55%,#101a2e)','radial-gradient(ellipse at 20% 20%,#0f766e 0,transparent 40%),radial-gradient(ellipse at 80% 80%,#2563eb 0,transparent 45%),linear-gradient(135deg,#0f172a,#0c4a6e)','radial-gradient(ellipse at 20% 20%,#f97316 0,transparent 40%),radial-gradient(ellipse at 80% 80%,#7c2d12 0,transparent 45%),linear-gradient(135deg,#111827,#431407)','radial-gradient(ellipse at 20% 20%,#ec4899 0,transparent 40%),radial-gradient(ellipse at 80% 80%,#7c3aed 0,transparent 45%),linear-gradient(135deg,#111827,#312e81)'];
+function setWallpaper(i){desktop.style.background=wallpapers[i]}
+function setAccent(c){document.documentElement.style.setProperty('--accent',c)}
+function calcAppend(v){const d=document.getElementById('calc-display');d.value=d.value==='0'?v:d.value+v}
+function calcClear(){document.getElementById('calc-display').value='0'}
+function calcBack(){const d=document.getElementById('calc-display');d.value=d.value.length>1?d.value.slice(0,-1):'0'}
+function calcEquals(){const d=document.getElementById('calc-display');try{if(!/^[0-9+\-*/().\s]+$/.test(d.value))throw Error();const result=Function('"use strict";return ('+d.value+')')();if(!Number.isFinite(result))throw Error();d.value=String(result)}catch(e){d.value='Error';setTimeout(calcClear,900)}}
+function updateClock(){const d=new Date();document.getElementById('clock-time').textContent=d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});document.getElementById('clock-date').textContent=d.toLocaleDateString([], {month:'short',day:'numeric'})}
+renderFiles();updateClock();setInterval(updateClock,1000);
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.getElementById('start-menu').classList.add('hidden');if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'&& !document.getElementById('win-notes').classList.contains('hidden')){e.preventDefault();saveNote()}});
+</script>
+</body>
+</html>
